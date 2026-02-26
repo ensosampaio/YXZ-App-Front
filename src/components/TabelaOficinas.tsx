@@ -1,7 +1,7 @@
-// src/components/TabelaOficinas.tsx
 import { Pencil } from 'lucide-react';
 import type { Oficina } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { STATUS_OFICINA_LABELS } from '@/constants/enums';
 
 interface TabelaOficinasProps {
   oficinas: Oficina[];
@@ -37,7 +37,25 @@ export default function TabelaOficinas({ oficinas, onEditar, getCorBorda, getSta
                   <p className="text-xs text-muted-foreground">{oficina.cidade}</p>
                 </td>
                 <td className="px-4 py-3 text-sm text-card-foreground">{oficina.data}</td>
-                <td className="px-4 py-3"><span className={getStatusClass(oficina.status)}>{oficina.status}</span></td>
+                
+                {/* --- AQUI ESTÁ A MUDANÇA NO STATUS --- */}
+                <td className="px-4 py-3">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={getStatusClass(oficina.status)}>
+                      {STATUS_OFICINA_LABELS[oficina.status] || oficina.status}
+                    </span>
+                    
+                    {oficina.status === 'CANCELADA' && oficina.motivoCancelamento && (
+                      <span 
+                        className="text-[11px] font-medium text-destructive/80 max-w-[150px] truncate" 
+                        title={oficina.motivoCancelamento}
+                      >
+                        Motivo: {oficina.motivoCancelamento}
+                      </span>
+                    )}
+                  </div>
+                </td>
+
                 <td className="px-4 py-3 text-sm text-card-foreground">{oficina.criadorNome || '-'}</td>
                 <td className="px-4 py-3">
                   {oficina.instrutores && oficina.instrutores.length > 0 ? (
