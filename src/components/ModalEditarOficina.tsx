@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api, { extractErrorMessage } from '@/lib/api';
 import type { Oficina } from '@/types';
 import ModalShell from '@/components/ModalShell';
+import { STATUS_OFICINA_LABELS } from '@/constants/enums';
 
 interface Props {
   oficina: Oficina | null;
@@ -12,7 +13,12 @@ interface Props {
 
 export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess }: Props) {
   const [formData, setFormData] = useState({
-    status: 'AGENDADA', instrutores: '', avaliacaoEscola: '', quantitativoAluno: '', acompanhanteTurma: ''
+    status: 'AGENDADA', 
+    instrutores: '', 
+    avaliacaoEscola: '', 
+    quantitativoAluno: '', 
+    acompanhanteTurma: '',
+    motivoCancelamento: '' // <-- Novo campo no estado
   });
   const [error, setError] = useState('');
 
@@ -23,7 +29,8 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
         instrutores: oficina.instrutores ? oficina.instrutores.join(', ') : '',
         avaliacaoEscola: oficina.avaliacaoEscola?.toString() || '',
         quantitativoAluno: oficina.quantitativoAluno?.toString() || '',
-        acompanhanteTurma: oficina.acompanhanteTurma || ''
+        acompanhanteTurma: oficina.acompanhanteTurma || '',
+        motivoCancelamento: oficina.motivoCancelamento || '' // <-- Puxa do banco se existir
       });
     }
   }, [oficina, isOpen]);
@@ -33,13 +40,17 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Se estiver cancelando, garantimos que mandamos o motivo. Senão, mandamos null.
     const payload = {
       status: formData.status,
       instrutores: formData.instrutores ? formData.instrutores.split(',').map(s => s.trim()).filter(Boolean) : [],
       avaliacaoEscola: formData.avaliacaoEscola ? parseInt(formData.avaliacaoEscola) : null,
       quantitativoAluno: formData.quantitativoAluno ? parseInt(formData.quantitativoAluno) : null,
-      acompanhanteTurma: formData.acompanhanteTurma
+      acompanhanteTurma: formData.acompanhanteTurma,
+      motivoCancelamento: formData.status === 'CANCELADA' ? formData.motivoCancelamento : null
     };
+
     try {
       await api.patch(`/oficinas/${oficina.id}`, payload);
       onSuccess();
@@ -70,11 +81,27 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
         <div>
           <label className={labelClass}>Status da Oficina</label>
           <select className={inputClass} value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-            <option value="AGENDADA">Agendada</option>
-            <option value="CONCLUIDA">Concluída</option>
-            <option value="CANCELADA">Cancelada</option>
+            {Object.entries(STATUS_OFICINA_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
           </select>
         </div>
+
+        {/* --- CAMPO CONDICIONAL PARA CANCELAMENTO --- */}
+        {formData.status === 'CANCELADA' && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+            <label className={`${labelClass} text-destructive`}>Motivo do Cancelamento</label>
+            <textarea 
+              className={`${inputClass} border-destructive/50 focus:border-destructive focus:ring-destructive/20`} 
+              value={formData.motivoCancelamento} 
+              onChange={(e) => setFormData({...formData, motivoCancelamento: e.target.value})}
+              placeholder="Descreva brevemente o porquê do cancelamento..."
+              rows={3}
+              required
+            />
+          </div>
+        )}
+
         <div>
           <label className={labelClass}>Instrutores (separados por vírgula)</label>
           <input className={inputClass} value={formData.instrutores} onChange={(e) => setFormData({...formData, instrutores: e.target.value})} />

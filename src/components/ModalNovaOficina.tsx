@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import api, { extractErrorMessage } from '@/lib/api';
 import ModalShell from '@/components/ModalShell';
+import { 
+  TIPO_OFICINA_LABELS, 
+  SEGMENTO_LABELS, 
+  TURNO_LABELS, 
+  TURMA_LABELS 
+} from '@/constants/enums';
 
 interface Props {
   isOpen: boolean;
@@ -64,46 +70,34 @@ export default function ModalNovaOficina({ isOpen, onClose, onSuccess }: Props) 
         <div>
           <label className={labelClass}>Tipo de Oficina</label>
           <select className={inputClass} value={formData.tipo} onChange={(e) => setFormData({...formData, tipo: e.target.value})}>
-            <option value="STORY_STARTER">Story Starter</option>
-            <option value="MAKER_ROBOTICA_O_QUE_E_PAEBM_8ANO_AO_3SERIE_EM">Maker Robótica</option>
-            <option value="ROBOTICA_LOGISTICA_VALE_6ANO_AO_SUPERIOR">Robótica Logística</option>
-            <option value="ROBOTICA_PELOTIZACAO_VALE_6ANO_AO_SUPERIOR">Robótica Pelotização</option>
-            <option value="ROBOTICA_MINERACAO_VALE_6ANO_AO_SUPERIOR">Robótica Mineração</option>
+            {Object.entries(TIPO_OFICINA_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
           </select>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className={labelClass}>Segmento</label>
             <select className={inputClass} value={formData.segmento} onChange={(e) => setFormData({...formData, segmento: e.target.value})}>
-              <option value="INFANTIL">Infantil</option>
-              <option value="FUNDAMENTAL">Fundamental</option>
-              <option value="MEDIO">Médio</option>
-              <option value="EJA">EJA</option>
-              <option value="TECNICO">Técnico</option>
-              <option value="SUPERIOR">Superior</option>
+              {Object.entries(SEGMENTO_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className={labelClass}>Turno</label>
             <select className={inputClass} value={formData.turno} onChange={(e) => setFormData({...formData, turno: e.target.value})}>
-              <option value="MATUTINO">Matutino</option>
-              <option value="VESPERTINO">Vespertino</option>
-              <option value="NOTURNO">Noturno</option>
+              {Object.entries(TURNO_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className={labelClass}>Turma</label>
             <select className={inputClass} value={formData.turma} onChange={(e) => setFormData({...formData, turma: e.target.value})}>
-              <option value="_6ANO">6º Ano</option>
-              <option value="_7ANO">7º Ano</option>
-              <option value="_8ANO">8º Ano</option>
-              <option value="_9ANO">9º Ano</option>
-              <option value="_1ANOEM">1º Ano EM</option>
-              <option value="_2ANOEM">2º Ano EM</option>
-              <option value="_3ANOEM">3º Ano EM</option>
-              <option value="EJA">EJA</option>
-              <option value="TECNICO">Técnico</option>
-              <option value="SUPERIOR">Superior</option>
+              {Object.entries(TURMA_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
         </div>

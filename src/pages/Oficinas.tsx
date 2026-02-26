@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api, { extractErrorMessage } from '@/lib/api';
 import type { Oficina, PageResponse } from '@/types';
-import { Plus, Search, X, Pencil } from 'lucide-react';
+import { Plus, Search, X, Download } from 'lucide-react';
 import ModalNovaOficina from '@/components/ModalNovaOficina';
 import ModalEditarOficina from '@/components/ModalEditarOficina';
+import ModalShell from '@/components/ModalShell';
+import TabelaOficinas from '@/components/TabelaOficinas';
+import { TIPO_OFICINA_LABELS, STATUS_OFICINA_LABELS, COR_ADMIN_LABELS } from '@/constants/enums';
 
 export default function Oficinas() {
   const { user } = useAuth();
@@ -12,10 +15,18 @@ export default function Oficinas() {
   const [isModalCreateOpen, setIsModalCreateOpen] = useState(false);
   const [oficinaEditando, setOficinaEditando] = useState<Oficina | null>(null);
   const [error, setError] = useState('');
+  
+  // Filtros da Tabela Principal
   const [filtroCidade, setFiltroCidade] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroCor, setFiltroCor] = useState('');
+
+  // Novos Estados para o Modal de Exportação
+  const [isModalExportOpen, setIsModalExportOpen] = useState(false);
+  const [exportFiltros, setExportFiltros] = useState({
+    dataInicio: '', dataFim: '', tipo: '', status: ''
+  });
 
   const fetchOficinas = async () => {
     setError('');
@@ -47,6 +58,52 @@ export default function Oficinas() {
     }
   };
 
+  const exportarParaExcel = async () => {
+    try {
+      const res = await api.get<PageResponse<Oficina>>('/oficinas?page=0&size=5000');
+      let dadosExportacao = res.data.items || res.data.content || [];
+
+      // LÓGICA DE FILTRAGEM DO CSV
+      if (exportFiltros.dataInicio) dadosExportacao = dadosExportacao.filter(o => o.data && o.data >= exportFiltros.dataInicio);
+      if (exportFiltros.dataFim) dadosExportacao = dadosExportacao.filter(o => o.data && o.data <= exportFiltros.dataFim);
+      if (exportFiltros.tipo) dadosExportacao = dadosExportacao.filter(o => o.tipo === exportFiltros.tipo);
+      if (exportFiltros.status) dadosExportacao = dadosExportacao.filter(o => o.status === exportFiltros.status);
+
+      if (dadosExportacao.length === 0) {
+        setError('Nenhum dado encontrado para os filtros selecionados.');
+        setIsModalExportOpen(false);
+        return;
+      }
+
+      const cabecalhos = ['ID', 'Escola', 'Cidade', 'Data', 'Tipo', 'Status', 'Criador', 'Instrutores', 'Nota', 'Qtd Alunos', 'Acompanhante', 'Segmento', 'Turno', 'Turma'];
+      const linhas = dadosExportacao.map(oficina => [
+        oficina.id, `"${oficina.escola || ''}"`, `"${oficina.cidade || ''}"`, oficina.data || '',
+        oficina.tipo || '', oficina.status || '', `"${oficina.criadorNome || ''}"`,
+        `"${oficina.instrutores ? oficina.instrutores.join(', ') : ''}"`, oficina.avaliacaoEscola || '',
+        oficina.quantitativoAluno || '', `"${oficina.acompanhanteTurma || ''}"`, oficina.segmento || '',
+        oficina.turno || '', oficina.turma || ''
+      ]);
+
+      const csvContent = [cabecalhos.join(';'), ...linhas.map(row => row.join(';'))].join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+
+      const dataHoje = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `relatorio_oficinas_${dataHoje}.csv`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setIsModalExportOpen(false);
+
+    } catch (error) {
+      setError(extractErrorMessage(error, 'Erro ao exportar dados.'));
+    }
+  };
+
   const getCorBorda = (cor?: string) => {
     switch (cor) {
       case 'ROSA': return 'cor-border-rosa';
@@ -68,6 +125,7 @@ export default function Oficinas() {
 
   const hasFilters = filtroCidade || filtroTipo || filtroStatus || filtroCor;
   const selectClass = "rounded-lg border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary";
+  const modalInputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
 
   return (
     <div className="space-y-6">
@@ -76,16 +134,26 @@ export default function Oficinas() {
           <h2 className="text-xl font-bold text-foreground">Gestão de Oficinas</h2>
           <p className="text-sm text-muted-foreground">Veja e gira as oficinas planeadas e concluídas.</p>
         </div>
-        {user?.role === 'ADMIN' && (
-          <button onClick={() => setIsModalCreateOpen(true)} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            <Plus className="h-4 w-4" /> Nova Oficina
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsModalExportOpen(true)} 
+            className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <Download className="h-4 w-4" /> Exportar BI
           </button>
-        )}
+
+          {user?.role === 'ADMIN' && (
+            <button onClick={() => setIsModalCreateOpen(true)} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Nova Oficina
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
 
-      {/* Filters */}
+      {/* Filters da Tabela Principal */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -98,25 +166,22 @@ export default function Oficinas() {
         </div>
         <select className={selectClass} value={filtroTipo} onChange={(e) => { setFiltroTipo(e.target.value); setFiltroStatus(''); setFiltroCidade(''); setFiltroCor(''); }}>
           <option value="">Tipo (Todos)</option>
-          <option value="STORY_STARTER">Story Starter</option>
-          <option value="MAKER_ROBOTICA_O_QUE_E_PAEBM_8ANO_AO_3SERIE_EM">Maker Robótica</option>
-          <option value="ROBOTICA_LOGISTICA_VALE_6ANO_AO_SUPERIOR">Robótica Logística</option>
-          <option value="ROBOTICA_PELOTIZACAO_VALE_6ANO_AO_SUPERIOR">Robótica Pelotização</option>
-          <option value="ROBOTICA_MINERACAO_VALE_6ANO_AO_SUPERIOR">Robótica Mineração</option>
+          {Object.entries(TIPO_OFICINA_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
         </select>
         <select className={selectClass} value={filtroStatus} onChange={(e) => { setFiltroStatus(e.target.value); setFiltroTipo(''); setFiltroCidade(''); setFiltroCor(''); }}>
           <option value="">Status (Todos)</option>
-          <option value="AGENDADA">Agendada</option>
-          <option value="CONCLUIDA">Concluída</option>
-          <option value="CANCELADA">Cancelada</option>
+          {Object.entries(STATUS_OFICINA_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
         </select>
         {user?.role === 'ADMIN' && (
           <select className={selectClass} value={filtroCor} onChange={(e) => { setFiltroCor(e.target.value); setFiltroTipo(''); setFiltroCidade(''); setFiltroStatus(''); }}>
             <option value="">Cor (Todas)</option>
-            <option value="ROSA">Rosa</option>
-            <option value="AZUL_CEU">Azul Céu</option>
-            <option value="AMBAR">Âmbar</option>
-            <option value="ROXO_ROOT">Roxo Root</option>
+            {Object.entries(COR_ADMIN_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
           </select>
         )}
         <button onClick={fetchOficinas} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Buscar</button>
@@ -127,71 +192,73 @@ export default function Oficinas() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Escola / Cidade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Criador</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Instrutores</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Acompanhante</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nota</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {oficinas.map((oficina) => (
-                <tr key={oficina.id} className={`hover:bg-muted/30 transition-colors ${getCorBorda(oficina.corCriador)}`}>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-card-foreground">{oficina.escola}</p>
-                    <p className="text-xs text-muted-foreground">{oficina.cidade}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-card-foreground">{oficina.data}</td>
-                  <td className="px-4 py-3"><span className={getStatusClass(oficina.status)}>{oficina.status}</span></td>
-                  <td className="px-4 py-3 text-sm text-card-foreground">{oficina.criadorNome || '-'}</td>
-                  <td className="px-4 py-3">
-  {oficina.instrutores && oficina.instrutores.length > 0 ? (
-    <div className="flex flex-wrap gap-1.5">
-      {oficina.instrutores.map((instrutor, index) => (
-        <span 
-          key={index} 
-          className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground border border-border/50"
-        >
-          {instrutor}
-        </span>
-      ))}
-    </div>
-  ) : (
-    <span className="text-muted-foreground">-</span>
-  )}
-</td>
-                  <td className="px-4 py-3 text-sm text-card-foreground">{oficina.acompanhanteTurma || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-card-foreground">{oficina.avaliacaoEscola ? `⭐ ${oficina.avaliacaoEscola}/10` : '-'}</td>
-                  <td className="px-4 py-3 text-right">
-                    {user?.role === 'USER' && (
-                      <button onClick={() => setOficinaEditando(oficina)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20">
-                        <Pencil className="h-3.5 w-3.5" /> Editar
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {oficinas.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhuma oficina encontrada.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Componente da Tabela Importado */}
+      <TabelaOficinas 
+        oficinas={oficinas} 
+        onEditar={setOficinaEditando} 
+        getCorBorda={getCorBorda} 
+        getStatusClass={getStatusClass} 
+      />
 
       <ModalNovaOficina isOpen={isModalCreateOpen} onClose={() => setIsModalCreateOpen(false)} onSuccess={fetchOficinas} />
       <ModalEditarOficina oficina={oficinaEditando} isOpen={!!oficinaEditando} onClose={() => setOficinaEditando(null)} onSuccess={fetchOficinas} />
+      
+      {/* Modal de Exportação */}
+      <ModalShell
+        isOpen={isModalExportOpen}
+        onClose={() => setIsModalExportOpen(false)}
+        title="Exportar Dados (Excel / BI)"
+        subtitle="Selecione os filtros para gerar a planilha. Deixe em branco para exportar tudo."
+        footer={
+          <>
+            <button onClick={() => setIsModalExportOpen(false)} className="rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">Cancelar</button>
+            <button onClick={exportarParaExcel} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              <Download className="h-4 w-4" /> Baixar Planilha
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">A partir de (Data Inicial)</label>
+              <input 
+                type="date" 
+                className={modalInputClass} 
+                value={exportFiltros.dataInicio} 
+                onChange={(e) => setExportFiltros({...exportFiltros, dataInicio: e.target.value})} 
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">Até (Data Final)</label>
+              <input 
+                type="date" 
+                className={modalInputClass} 
+                value={exportFiltros.dataFim} 
+                onChange={(e) => setExportFiltros({...exportFiltros, dataFim: e.target.value})} 
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-card-foreground">Tipo de Oficina</label>
+            <select className={modalInputClass} value={exportFiltros.tipo} onChange={(e) => setExportFiltros({...exportFiltros, tipo: e.target.value})}>
+              <option value="">Todos os Tipos</option>
+              {Object.entries(TIPO_OFICINA_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-card-foreground">Status</label>
+            <select className={modalInputClass} value={exportFiltros.status} onChange={(e) => setExportFiltros({...exportFiltros, status: e.target.value})}>
+              <option value="">Todos os Status</option>
+              {Object.entries(STATUS_OFICINA_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </ModalShell>
     </div>
   );
 }

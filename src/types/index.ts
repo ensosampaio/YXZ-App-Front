@@ -1,10 +1,19 @@
+import { 
+  TipoOficina, 
+  StatusOficina, 
+  CorAdministradora, 
+  Segmento, 
+  Turno, 
+  Turma 
+} from '@/constants/enums';
+
 export interface UserDTO {
   id?: number;
   userId?: number;
   nome: string;
   email?: string;
-  role: 'ROOT' | 'ADMIN' | 'USER';
-  corAdministradora?: string | null;
+  role: 'ROOT' | 'ADMIN' | 'USER'; 
+  corAdministradora?: CorAdministradora | null;
   ativo?: boolean;
 }
 
@@ -13,18 +22,19 @@ export interface Oficina {
   escola: string;
   cidade: string;
   data: string;
-  tipo: 'STORY_STARTER' | 'MAKER_ROBOTICA_O_QUE_E_PAEBM_8ANO_AO_3SERIE_EM' | 'ROBOTICA_LOGISTICA_VALE_6ANO_AO_SUPERIOR' | 'ROBOTICA_PELOTIZACAO_VALE_6ANO_AO_SUPERIOR' | 'ROBOTICA_MINERACAO_VALE_6ANO_AO_SUPERIOR';
-  status: 'AGENDADA' | 'CONCLUIDA' | 'CANCELADA';
+  tipo: TipoOficina;
+  status: StatusOficina;
   criadorNome?: string;
-  corCriador?: string;
+  corCriador?: CorAdministradora;
   instrutores?: string[];
   avaliacaoEscola?: number | null;
   quantitativoAluno?: number | null;
   acompanhanteTurma?: string;
   contatoEscola?: string;
-  segmento?: string;
-  turno?: string;
-  turma?: string;
+  segmento?: Segmento;
+  turno?: Turno;
+  turma?: Turma;
+  motivoCancelamento?: string;
 }
 
 export interface PageResponse<T> {
