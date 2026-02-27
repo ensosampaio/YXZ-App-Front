@@ -1,7 +1,8 @@
 // --- TIPO DE OFICINA ---
 export enum TipoOficina {
   STORY_STARTER = 'STORY_STARTER',
-  MAKER_ROBOTICA = 'MAKER_ROBOTICA_O_QUE_E_PAEBM_8ANO_AO_3SERIE_EM',
+  PAEBM_OFICINA = 'MAKER_ROBOTICA_O_QUE_E_PAEBM_OFICINA',
+  PAEBM_EVENTO = 'MAKER_ROBOTICA_O_QUE_E_PAEBM_EVENTO',
   ROBOTICA_LOGISTICA = 'ROBOTICA_LOGISTICA_VALE_6ANO_AO_SUPERIOR',
   ROBOTICA_PELOTIZACAO = 'ROBOTICA_PELOTIZACAO_VALE_6ANO_AO_SUPERIOR',
   ROBOTICA_MINERACAO = 'ROBOTICA_MINERACAO_VALE_6ANO_AO_SUPERIOR'
@@ -9,9 +10,10 @@ export enum TipoOficina {
 
 export const TIPO_OFICINA_LABELS: Record<TipoOficina, string> = {
   [TipoOficina.STORY_STARTER]: 'Story Starter',
-  [TipoOficina.MAKER_ROBOTICA]: 'Maker Robótica',
-  [TipoOficina.ROBOTICA_LOGISTICA]: 'Robótica Logística',
-  [TipoOficina.ROBOTICA_PELOTIZACAO]: 'Robótica Pelotização',
+  [TipoOficina.PAEBM_OFICINA]: 'PAEBM Oficina',
+  [TipoOficina.PAEBM_EVENTO]: 'PAEBM Evento',
+  [TipoOficina.ROBOTICA_LOGISTICA]: 'Robótica Logística GV',
+  [TipoOficina.ROBOTICA_PELOTIZACAO]: 'Robótica Pelotização VIX',
   [TipoOficina.ROBOTICA_MINERACAO]: 'Robótica Mineração',
 };
 
