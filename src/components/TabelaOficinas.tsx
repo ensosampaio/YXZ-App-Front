@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, Image as ImageIcon } from 'lucide-react';
 import type { Oficina } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { STATUS_OFICINA_LABELS } from '@/constants/enums';
@@ -38,7 +38,7 @@ export default function TabelaOficinas({ oficinas, onEditar, getCorBorda, getSta
                 </td>
                 <td className="px-4 py-3 text-sm text-card-foreground">{oficina.data}</td>
                 
-                {/* --- AQUI ESTÁ A MUDANÇA NO STATUS --- */}
+                {/* --- STATUS COM MOTIVO DE CANCELAMENTO --- */}
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-start gap-1">
                     <span className={getStatusClass(oficina.status)}>
@@ -70,12 +70,30 @@ export default function TabelaOficinas({ oficinas, onEditar, getCorBorda, getSta
                 </td>
                 <td className="px-4 py-3 text-sm text-card-foreground">{oficina.acompanhanteTurma || '-'}</td>
                 <td className="px-4 py-3 text-sm text-card-foreground">{oficina.avaliacaoEscola ? `⭐ ${oficina.avaliacaoEscola}/10` : '-'}</td>
+                
+                {/* --- AÇÕES ATUALIZADAS (FOTOS + EDITAR) --- */}
                 <td className="px-4 py-3 text-right">
-                  {user?.role === 'USER' && (
-                    <button onClick={() => onEditar(oficina)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20">
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </button>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    
+                    {oficina.linkPastaDrive && (
+                      <a 
+                        href={oficina.linkPastaDrive} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        title="Ver fotos no Google Drive"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" /> Fotos
+                      </a>
+                    )}
+
+                    {user?.role === 'USER' && (
+                      <button onClick={() => onEditar(oficina)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                    )}
+
+                  </div>
                 </td>
               </tr>
             ))}
