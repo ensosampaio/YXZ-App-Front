@@ -35,6 +35,7 @@ export interface Oficina {
   turno?: Turno;
   turma?: Turma;
   motivoCancelamento?: string;
+  linkPastaDrive?: string;
 }
 
 export interface PageResponse<T> {
