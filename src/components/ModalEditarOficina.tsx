@@ -18,9 +18,13 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
     avaliacaoEscola: '', 
     quantitativoAluno: '', 
     acompanhanteTurma: '',
-    motivoCancelamento: '' // <-- Novo campo no estado
+    motivoCancelamento: ''
   });
+  
+  // Novos estados para o Google Drive
+  const [fotos, setFotos] = useState<FileList | null>(null);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (oficina && isOpen) {
@@ -30,8 +34,10 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
         avaliacaoEscola: oficina.avaliacaoEscola?.toString() || '',
         quantitativoAluno: oficina.quantitativoAluno?.toString() || '',
         acompanhanteTurma: oficina.acompanhanteTurma || '',
-        motivoCancelamento: oficina.motivoCancelamento || '' // <-- Puxa do banco se existir
+        motivoCancelamento: oficina.motivoCancelamento || ''
       });
+      // Limpa as fotos antigas sempre que o modal abre
+      setFotos(null);
     }
   }, [oficina, isOpen]);
 
@@ -40,8 +46,8 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     
-    // Se estiver cancelando, garantimos que mandamos o motivo. Senão, mandamos null.
     const payload = {
       status: formData.status,
       instrutores: formData.instrutores ? formData.instrutores.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -52,11 +58,27 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
     };
 
     try {
+      // 1. Atualiza os dados de texto normais
       await api.patch(`/oficinas/${oficina.id}`, payload);
+
+      // 2. Se o usuário selecionou fotos, envia para o novo endpoint do Drive
+      if (fotos && fotos.length > 0) {
+        const fotosData = new FormData();
+        Array.from(fotos).forEach(foto => {
+          fotosData.append('fotos', foto);
+        });
+
+        await api.post(`/oficinas/${oficina.id}/fotos`, fotosData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
       onSuccess();
       onClose();
     } catch (error) {
       setError(extractErrorMessage(error, 'Erro ao atualizar oficina.'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -71,8 +93,20 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
       subtitle={oficina.escola}
       footer={
         <>
-          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">Cancelar</button>
-          <button onClick={handleSubmit as any} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Salvar</button>
+          <button 
+            onClick={onClose} 
+            disabled={isSubmitting} 
+            className="rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button 
+            onClick={handleSubmit as any} 
+            disabled={isSubmitting} 
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Salvando...' : 'Salvar'}
+          </button>
         </>
       }
     >
@@ -106,6 +140,7 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
           <label className={labelClass}>Instrutores (separados por vírgula)</label>
           <input className={inputClass} value={formData.instrutores} onChange={(e) => setFormData({...formData, instrutores: e.target.value})} />
         </div>
+        
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Avaliação (1 a 10)</label>
@@ -116,10 +151,25 @@ export default function ModalEditarOficina({ oficina, isOpen, onClose, onSuccess
             <input type="number" className={inputClass} value={formData.quantitativoAluno} onChange={(e) => setFormData({...formData, quantitativoAluno: e.target.value})} />
           </div>
         </div>
+        
         <div>
           <label className={labelClass}>Acompanhante da Turma</label>
           <input className={inputClass} value={formData.acompanhanteTurma} onChange={(e) => setFormData({...formData, acompanhanteTurma: e.target.value})} />
         </div>
+
+        {/* --- CAMPO NOVO: UPLOAD DE FOTOS --- */}
+        <div className="mt-4 rounded-lg border border-dashed border-border/60 bg-muted/20 p-4">
+          <label className={`${labelClass} text-primary`}>Anexar Fotos da Oficina (Google Drive)</label>
+          <p className="mb-3 text-xs text-muted-foreground">Selecione as imagens para comprovação da oficina.</p>
+          <input 
+            type="file" 
+            multiple 
+            accept="image/*"
+            className="w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary hover:file:bg-primary/20"
+            onChange={(e) => setFotos(e.target.files)} 
+          />
+        </div>
+
       </form>
     </ModalShell>
   );
